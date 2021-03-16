@@ -40,6 +40,6 @@ jobs:
           file: ./src/Dockerfile
           tags: |
             kauereinbold/api-produto:latest
-            kauereinbold/api-produto:$(( github.run_number ))
+            kauereinbold/api-produto:v$(( github.run_number ))
           push: true
             
