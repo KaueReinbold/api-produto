@@ -2,36 +2,21 @@
 
 name: CI-CD
 
-# Controls when the action will run. 
 on:
-  # Triggers the workflow on push or pull request events but only for the master branch
   push:
     branches: [ master ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  CI:
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       
       - name: Docker Login
-        # You may pin to the exact commit or the version.
-        # uses: docker/login-action@f3364599c6aa293cdc2b8391b1b56d0c30e45c8a
         uses: docker/login-action@v1.8.0
         with:
-          # Username used to log against the Docker registry
-          username: ${{ secrets.DOCKER_HUB_USER_NAME }} # optional
-          # Password or personal access token used to log against the Docker registry
-          password: ${{ secrets.DOCKER_HUB_PASSWORD }} # optional
+          username: ${{ secrets.DOCKER_HUB_USER_NAME }} 
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }} 
       
       - name: Build and push Docker Images
         uses: docker/build-push-action@v2.3.0
@@ -42,4 +27,27 @@ jobs:
             kauereinbold/api-produto:latest
             kauereinbold/api-produto:v${{ github.run_number }}
           push: true
-            
+  CD:
+    needs: [CI]
+    runs-on: ubuntu-latest 
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Kubernetes Settings Context
+        uses: Azure/k8s-set-context@v1
+        with:
+          kubeconfig: ${{ secrets.K8S_CONFIG }}
+          
+      - name: Deploy Mongo
+        uses: Azure/k8s-deploy@v1.3
+        with:
+          manifests: |
+            k8s/mongodb/deployment.yaml
+            k8s/mongodb/service.yaml
+        
+      - name: Deploy Api
+        uses: Azure/k8s-deploy@v1.3
+        with:
+          manifests: |
+            k8s/api/deployment.yaml
+            k8s/api/service.yaml
